@@ -28,7 +28,7 @@ namespace KPI_Lab5_Selenium
             driver.FindElement(By.Id("email")).SendKeys("test@gmail.com");
             driver.FindElement(By.Id("form_submit")).Click();
            
-            Thread.Sleep(2000);
+            Thread.Sleep(1000);
             
             string pageText = driver.FindElement(By.TagName("h1")).Text;
             
@@ -63,15 +63,15 @@ namespace KPI_Lab5_Selenium
             SelectElement select = new SelectElement(driver.FindElement(By.Id("dropdown")));
 
             Assert.That(select.Options.Count, Is.EqualTo(3));
-            Thread.Sleep(2000);
+            Thread.Sleep(1000);
 
             Assert.That(select.Options[1].Text, Is.EqualTo("Option 1"));
             Assert.That(select.Options[2].Text, Is.EqualTo("Option 2"));
-            Thread.Sleep(2000);
+            Thread.Sleep(1000);
 
             select.SelectByText("Option 2");
 
-            Thread.Sleep(2000);
+            Thread.Sleep(1000);
 
             Assert.That(select.SelectedOption.Text, Is.EqualTo("Option 2"));
         }
@@ -92,16 +92,19 @@ namespace KPI_Lab5_Selenium
             Assert.That(actualText, Is.EqualTo(expectedText), "У тексті знайдено орфографічну помилку!");
         }
 
-
         [Test]
-        public void Test05_EntryAd_CloseModal_BestWay()
+        public void Test05_EntryAd_CloseModal()
         {
             driver.Navigate().GoToUrl(BASEURL);
             driver.FindElement(By.LinkText("Entry Ad")).Click();
 
             WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
 
-            IWebElement closeButton = wait.Until(ExpectedConditions.ElementToBeClickable(By.XPath("//*[@id=\"modal\"]/div[2]/div[3]/p")));
+            wait.Until(ExpectedConditions.ElementIsVisible(By.ClassName("modal")));
+
+            Thread.Sleep(2000);
+
+            IWebElement closeButton = driver.FindElement(By.XPath("//*[@id=\"modal\"]/div[2]/div[3]/p"));
 
             closeButton.Click();
 
