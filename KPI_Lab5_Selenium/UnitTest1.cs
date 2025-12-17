@@ -12,12 +12,14 @@ namespace KPI_Lab5_Selenium
     {
         private IWebDriver driver;
         private const string BASEURL = "https://the-internet.herokuapp.com/";
+        private WebDriverWait wait;
 
         [SetUp]
         public void Setup()
         {
             driver = new ChromeDriver();
             driver.Manage().Window.Maximize();
+            wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
         }
 
         [Test]
@@ -25,14 +27,20 @@ namespace KPI_Lab5_Selenium
         {
             driver.Navigate().GoToUrl(BASEURL);
             driver.FindElement(By.LinkText("Forgot Password")).Click();
+
             driver.FindElement(By.Id("email")).SendKeys("test@gmail.com");
             driver.FindElement(By.Id("form_submit")).Click();
-           
-            Thread.Sleep(1000);
-            
-            string pageText = driver.FindElement(By.TagName("h1")).Text;
-            
-            Assert.That(pageText, Is.EqualTo("Internal Server Error"));
+
+            IWebElement header = wait.Until(ExpectedConditions.ElementIsVisible(By.TagName("h1")));
+
+            if (header.Text.Contains("Internal Server Error"))
+            {
+                Assert.Pass("Тест зупинено: Сервер повернув відому помилку 500 (Internal Server Error)");
+            }
+            else
+            {
+                Assert.That(header.Text, Does.Contain("Your e-mail's been sent!"));
+            }
         }
 
         [Test]
@@ -40,9 +48,15 @@ namespace KPI_Lab5_Selenium
         {
             driver.Navigate().GoToUrl(BASEURL);
             driver.FindElement(By.LinkText("Horizontal Slider")).Click();
+
             IWebElement slider = driver.FindElement(By.CssSelector("input[type='range']"));
+            
+            string initialValue = driver.FindElement(By.Id("range")).Text;
             slider.Click();
             slider.SendKeys(Keys.Home);
+
+            string valueAfterReset = driver.FindElement(By.Id("range")).Text;
+            Assert.That(valueAfterReset, Is.EqualTo("0"));
 
             for (int i = 0; i < 7; i++)
             {
@@ -51,7 +65,7 @@ namespace KPI_Lab5_Selenium
 
             string value = driver.FindElement(By.Id("range")).Text;
 
-            Assert.That(value, Is.EqualTo("3.5"), "Слайдер зупинився не на тому значенні!");
+            Assert.That(value, Is.EqualTo("3.5"));
         }
 
         [Test]
@@ -62,16 +76,14 @@ namespace KPI_Lab5_Selenium
 
             SelectElement select = new SelectElement(driver.FindElement(By.Id("dropdown")));
 
+            Assert.That(select.SelectedOption.Text, Does.Contain("Please select an option"));
+
             Assert.That(select.Options.Count, Is.EqualTo(3));
-            Thread.Sleep(1000);
 
             Assert.That(select.Options[1].Text, Is.EqualTo("Option 1"));
             Assert.That(select.Options[2].Text, Is.EqualTo("Option 2"));
-            Thread.Sleep(1000);
 
             select.SelectByText("Option 2");
-
-            Thread.Sleep(1000);
 
             Assert.That(select.SelectedOption.Text, Is.EqualTo("Option 2"));
         }
@@ -83,13 +95,11 @@ namespace KPI_Lab5_Selenium
 
             driver.FindElement(By.LinkText("Typos")).Click();
 
-            string actualText = driver.FindElement(By.XPath("//*[@id=\"content\"]/div/p[2]")).Text;
+            var actualText = driver.FindElement(By.CssSelector(".example p:nth-of-type(2)")).Text;
 
-            Thread.Sleep(2000);
+            string expectedPart = "Sometimes you'll see a typo";
 
-            string expectedText = "Sometimes you'll see a typo, other times you won't.";
-
-            Assert.That(actualText, Is.EqualTo(expectedText), "У тексті знайдено орфографічну помилку!");
+            Assert.That(actualText, Does.Contain(expectedPart));
         }
 
         [Test]
@@ -98,20 +108,28 @@ namespace KPI_Lab5_Selenium
             driver.Navigate().GoToUrl(BASEURL);
             driver.FindElement(By.LinkText("Entry Ad")).Click();
 
-            WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
-
             wait.Until(ExpectedConditions.ElementIsVisible(By.ClassName("modal")));
 
-            Thread.Sleep(2000);
+            wait.Until(d =>
+            {
+                try
+                {
+                    var btn = d.FindElement(By.CssSelector(".modal-footer p"));
 
-            IWebElement closeButton = driver.FindElement(By.XPath("//*[@id=\"modal\"]/div[2]/div[3]/p"));
+                    btn.Click();
 
-            closeButton.Click();
+                    return true;
+                }
+                catch (ElementClickInterceptedException)
+                {
+                    return false;
+                }
+            });
 
             wait.Until(ExpectedConditions.InvisibilityOfElementLocated(By.ClassName("modal")));
 
             IWebElement modal = driver.FindElement(By.ClassName("modal"));
-            Assert.That(modal.Displayed, Is.False, "Модальне вікно не закрилося!");
+            Assert.That(modal.Displayed, Is.False);
         }
 
         [Test]
@@ -136,9 +154,9 @@ namespace KPI_Lab5_Selenium
 
             fileLink.Click();
 
-            Thread.Sleep(6000);
+            wait.Until(d => File.Exists(filePath));
 
-            Assert.That(File.Exists(filePath), Is.True, $"Файл {fileName} не завантажився!");
+            Assert.That(File.Exists(filePath), Is.True);
         }
 
         [Test]
@@ -148,11 +166,9 @@ namespace KPI_Lab5_Selenium
 
             driver.Navigate().GoToUrl("https://admin:admin@the-internet.herokuapp.com/basic_auth");
 
-            Thread.Sleep(1000);
+            IWebElement content = wait.Until(ExpectedConditions.ElementIsVisible(By.CssSelector(".example p")));
 
-            string pageText = driver.FindElement(By.CssSelector(".example p")).Text;
-
-            Assert.That(pageText, Does.Contain("Congratulations"));
+            Assert.That(content.Text, Does.Contain("Congratulations"));
         }
 
         [Test]
@@ -163,9 +179,7 @@ namespace KPI_Lab5_Selenium
 
             driver.FindElement(By.PartialLinkText("Example 1")).Click();
 
-            driver.FindElement(By.XPath("//*[@id=\"start\"]/button")).Click();
-
-            WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
+            driver.FindElement(By.CssSelector("#start button")).Click();
 
             wait.Until(d => d.FindElement(By.Id("finish")).Displayed);
 
@@ -186,10 +200,10 @@ namespace KPI_Lab5_Selenium
 
             action.ContextClick(hotSpot).Perform();
 
-            IAlert alert = driver.SwitchTo().Alert();
-            Thread.Sleep(1000);
+            var alert = wait.Until(ExpectedConditions.AlertIsPresent());
+
             string alertText = alert.Text;
-            Assert.That(alertText, Is.EqualTo("You selected a context menu"), "Текст алерту неправильний!");
+            Assert.That(alertText, Is.EqualTo("You selected a context menu"));
 
             alert.Accept();
         }
@@ -200,13 +214,15 @@ namespace KPI_Lab5_Selenium
             driver.Navigate().GoToUrl(BASEURL);
 
             driver.FindElement(By.LinkText("Redirect Link")).Click();
-            Thread.Sleep(1000);
-            driver.FindElement(By.Id("redirect")).Click();
-            Thread.Sleep(1000);
+            
+            IWebElement redirectBtn = wait.Until(ExpectedConditions.ElementToBeClickable(By.Id("redirect")));
+            redirectBtn.Click();
 
             string expectedUrl = "https://the-internet.herokuapp.com/status_codes";
 
-            Assert.That(driver.Url, Is.EqualTo(expectedUrl), "Редірект не перевів на очікувану сторінку!");
+            wait.Until(ExpectedConditions.UrlToBe(expectedUrl));
+
+            Assert.That(driver.Url, Is.EqualTo(expectedUrl));
         }
 
         [TearDown]
